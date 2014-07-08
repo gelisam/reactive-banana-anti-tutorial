@@ -1,4 +1,7 @@
 module Main where
 
+import Graphics.Gloss
+
+
 main :: IO ()
-main = putStrLn "typechecks."
+main = display (InWindow "Nice Window" (200, 200) (800, 200)) white (Circle 80)
