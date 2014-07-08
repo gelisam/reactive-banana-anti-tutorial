@@ -7,7 +7,6 @@ synopsis:            A dummy project to learn about FRP.
 -- description:         
 homepage:            http://gelisam.com
 license:             PublicDomain
-license-file:        LICENSE
 author:              Samuel Gélineau
 maintainer:          gelisam+github@gmail.com
 -- copyright:           
