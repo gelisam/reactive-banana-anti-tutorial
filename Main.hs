@@ -1,8 +1,10 @@
 module Main where
 
+import Control.Applicative
 import Data.Monoid
 import Graphics.Gloss
 import Graphics.Gloss.Data.Extent
+import Graphics.Gloss.Interface.FRP.ReactiveBanana
 
 
 extentR, extentA, extentB, extentC :: Extent
@@ -12,13 +14,10 @@ extentB = makeExtent (-10) (-40) 65 (-65)
 extentC = makeExtent (-60) (-90) 65 (-65)
 
 main :: IO ()
-main = play (InWindow "Nice Window" (200, 200) (800, 200))
-            white
-            30
-            (1, 2, 3)
-            render
-            (const id)
-            (const id)
+main = playBanana (InWindow "Nice Window" (200, 200) (800, 200))
+                  white
+                  30
+                  (\_ _ -> return $ pure $ circle 10)
 
 render :: (Int, Int, Int) -> Picture
 render (xA, xB, xC) = button extentR "Refresh"
