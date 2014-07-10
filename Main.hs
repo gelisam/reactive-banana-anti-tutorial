@@ -5,6 +5,7 @@ import Data.Monoid
 import Graphics.Gloss
 import Graphics.Gloss.Data.Extent
 import Graphics.Gloss.Interface.FRP.ReactiveBanana
+import Reactive.Banana.Combinators
 
 
 extentR, extentA, extentB, extentC :: Extent
@@ -17,7 +18,10 @@ main :: IO ()
 main = playBanana (InWindow "Nice Window" (200, 200) (800, 200))
                   white
                   30
-                  (\_ _ -> return $ pure $ circle 10)
+                  (\floats _ -> return $ fmap renderFloat $ stepper 0 floats)
+
+renderFloat :: Float -> Picture
+renderFloat = uscale 0.2 . text . show
 
 render :: (Int, Int, Int) -> Picture
 render (xA, xB, xC) = button extentR "Refresh"
