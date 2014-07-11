@@ -6,6 +6,7 @@ import Data.Monoid
 import Graphics.Gloss
 import Graphics.Gloss.Data.Extent
 import Graphics.Gloss.Interface.FRP.ReactiveBanana
+import Graphics.Gloss.Interface.Pure.Game hiding (Event)
 import Reactive.Banana.Combinators
 import Reactive.Banana.Frameworks
 import Reactive.Banana.Switch
@@ -27,13 +28,31 @@ reactiveMain :: forall t. Frameworks t
              => Event t Float
              -> Event t InputEvent
              -> Moment t (Behavior t Picture)
-reactiveMain floats _ = return pictures
+reactiveMain floats events = return pictures
   where
-    partialSums :: Behavior t Float
-    partialSums = accumB 0 (fmap (+) floats)
+    buttonClicks :: [Event t ()]
+    buttonClicks = map (flip buttonClick events) buttons
+    
+    countA,countB,countC :: Behavior t Int
+    [countA,countB,countC] = map countEventsB buttonClicks
+    
+    clickCounts :: Behavior t (Int,Int,Int)
+    clickCounts = liftA3 (,,) countA countB countC
     
     pictures :: Behavior t Picture
-    pictures = fmap renderFloat partialSums
+    pictures = fmap render clickCounts
+
+countEventsB :: Num a => Event t b -> Behavior t a
+countEventsB = accumB 0 . fmap (+) . fmap (const 1)
+
+buttons :: [Extent]
+buttons = [extentA, extentB, extentC]
+
+buttonClick :: Extent -> Event t InputEvent -> Event t ()
+buttonClick ex = fmap (const ()) . filterE isInside
+  where
+    isInside (EventKey (MouseButton LeftButton) Down _ p) = pointInExtent ex p
+    isInside _                                            = False
 
 renderFloat :: Float -> Picture
 renderFloat = uscale 0.2 . text . show
