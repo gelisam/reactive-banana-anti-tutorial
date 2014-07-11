@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Main where
 
 import Control.Applicative
@@ -6,6 +7,8 @@ import Graphics.Gloss
 import Graphics.Gloss.Data.Extent
 import Graphics.Gloss.Interface.FRP.ReactiveBanana
 import Reactive.Banana.Combinators
+import Reactive.Banana.Frameworks
+import Reactive.Banana.Switch
 
 
 extentR, extentA, extentB, extentC :: Extent
@@ -18,7 +21,19 @@ main :: IO ()
 main = playBanana (InWindow "Nice Window" (200, 200) (800, 200))
                   white
                   30
-                  (\floats _ -> return $ fmap renderFloat $ stepper 0 floats)
+                  reactiveMain
+
+reactiveMain :: forall t. Frameworks t
+             => Event t Float
+             -> Event t InputEvent
+             -> Moment t (Behavior t Picture)
+reactiveMain floats _ = return pictures
+  where
+    partialSums :: Behavior t Float
+    partialSums = accumB 0 (fmap (+) floats)
+    
+    pictures :: Behavior t Picture
+    pictures = fmap renderFloat partialSums
 
 renderFloat :: Float -> Picture
 renderFloat = uscale 0.2 . text . show
