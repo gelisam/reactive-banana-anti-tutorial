@@ -33,8 +33,25 @@ reactiveMain floats events = return pictures
     buttonClicks :: [Event t ()]
     buttonClicks = map (flip buttonClick events) buttons
     
+    labelledClicks :: [Event t Char]
+    labelledClicks = zipWith (fmap . const) ['a'..] buttonClicks
+    
+    clickLabels :: Event t Char
+    clickLabels = foldr union never labelledClicks
+    
+    clickEvents :: Event t (Char, Int)
+    clickEvents = accumE (undefined, 0) (fmap mkEvent clickLabels)
+    
+    mkEvent :: Char -> (Char, Int) -> (Char, Int)
+    mkEvent label (_, n) = (label, n+1)
+    
     countA,countB,countC :: Behavior t Int
-    [countA,countB,countC] = map countEventsB buttonClicks
+    [countA,countB,countC] = map countN "abc"
+    
+    countN :: Char -> Behavior t Int
+    countN label = stepper 0
+                 $ fmap snd
+                 $ filterE ((== label) . fst) clickEvents
     
     clickCounts :: Behavior t (Int,Int,Int)
     clickCounts = liftA3 (,,) countA countB countC
