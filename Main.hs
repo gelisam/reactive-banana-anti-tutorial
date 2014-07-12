@@ -43,7 +43,7 @@ reactiveMain floats events = return pictures
     labelledClicks = zipWith (fmap . const) ['a'..] fakeButtonClicks
     
     clickLabels :: Event t Char
-    clickLabels = foldr union never labelledClicks
+    clickLabels = foldr union never (reverse labelledClicks)
     
     clickEvents :: Event t (Char, Int)
     clickEvents = accumE (undefined, 0) (fmap mkEvent clickLabels)
