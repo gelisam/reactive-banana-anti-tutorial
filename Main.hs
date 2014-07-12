@@ -30,11 +30,17 @@ reactiveMain :: forall t. Frameworks t
              -> Moment t (Behavior t Picture)
 reactiveMain floats events = return pictures
   where
+    refreshClicks :: Event t ()
+    refreshClicks = buttonClick extentR events
+    
     buttonClicks :: [Event t ()]
     buttonClicks = map (flip buttonClick events) buttons
     
+    fakeButtonClicks :: [Event t ()]
+    fakeButtonClicks = map (union refreshClicks) buttonClicks
+    
     labelledClicks :: [Event t Char]
-    labelledClicks = zipWith (fmap . const) ['a'..] buttonClicks
+    labelledClicks = zipWith (fmap . const) ['a'..] fakeButtonClicks
     
     clickLabels :: Event t Char
     clickLabels = foldr union never labelledClicks
