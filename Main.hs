@@ -2,6 +2,8 @@
 module Main where
 
 import Control.Applicative
+import Control.Arrow
+import Data.List hiding (union)
 import Data.Monoid
 import Data.Tuple
 import Graphics.Gloss
@@ -62,6 +64,7 @@ reactiveMain floats events = return pictures
     
     countN :: Char -> Behavior t Int
     countN label = stepper 0
+                 $ delayE floats 0.5
                  $ fmap snd
                  $ filterE ((== label) . fst)
                  $ clickEvents
@@ -75,6 +78,50 @@ reactiveMain floats events = return pictures
 
 voidE :: Event t a -> Event t ()
 voidE = fmap (const ())
+
+
+data Schedule a = Schedule
+  { currentEvents :: [a]
+  , futureEvents :: [(Float, a)]
+  }
+  deriving Show
+
+instance Monoid (Schedule a)
+  where
+    mempty = Schedule [] []
+    Schedule xs txs `mappend` Schedule ys tys
+      = Schedule (xs `mappend` ys) (txs `mappend` tys)
+
+scheduleEvent :: Float -> a -> Schedule a
+scheduleEvent t x = Schedule [] [(t,x)]
+
+advanceSchedule :: forall a. Float -> Schedule a -> Schedule a
+advanceSchedule dt s = Schedule (map snd triggered) remaining
+  where
+    decreasedEvents, triggered, remaining :: [(Float, a)]
+    decreasedEvents = map (first (subtract dt)) (futureEvents s)
+    (triggered, remaining) = partition ((<= 0) . fst) decreasedEvents
+
+delayE :: forall t a. Event t Float -> Float -> Event t a -> Event t a
+delayE dts delay events = delayedEvents
+  where
+    scheduledEvents :: Event t (Schedule a)
+    scheduledEvents = scheduleEvent delay <$> events
+    
+    eventSchedulers :: Event t (Schedule a -> Schedule a)
+    eventSchedulers = mappend <$> scheduledEvents
+    
+    scheduleAdvancers :: Event t (Schedule a -> Schedule a)
+    scheduleAdvancers = advanceSchedule <$> dts
+    
+    scheduleModifiers :: Event t (Schedule a -> Schedule a)
+    scheduleModifiers = eventSchedulers `union` scheduleAdvancers
+    
+    delayedSchedule :: Event t (Schedule a)
+    delayedSchedule = accumE mempty scheduleModifiers
+    
+    delayedEvents :: Event t a
+    delayedEvents = spill (currentEvents <$> delayedSchedule)
 
 
 firstEvent :: Event t a -> Event t a
