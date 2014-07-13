@@ -3,6 +3,7 @@ module Main where
 
 import Control.Applicative
 import Data.Monoid
+import Data.Tuple
 import Graphics.Gloss
 import Graphics.Gloss.Data.Extent
 import Graphics.Gloss.Interface.FRP.ReactiveBanana
@@ -30,14 +31,20 @@ reactiveMain :: forall t. Frameworks t
              -> Moment t (Behavior t Picture)
 reactiveMain floats events = return pictures
   where
+    beginning :: Event t ()
+    beginning = voidE (firstEvent floats)
+    
     refreshClicks :: Event t ()
     refreshClicks = buttonClick extentR events
     
     buttonClicks :: [Event t ()]
     buttonClicks = map (flip buttonClick events) buttons
     
+    addFakeClicks :: Event t () -> Event t ()
+    addFakeClicks realClicks = unions [beginning, refreshClicks, realClicks]
+    
     fakeButtonClicks :: [Event t ()]
-    fakeButtonClicks = map (union refreshClicks) buttonClicks
+    fakeButtonClicks = map addFakeClicks buttonClicks
     
     labelledClicks :: [Event t Char]
     labelledClicks = zipWith (fmap . const) ['a'..] fakeButtonClicks
@@ -46,10 +53,9 @@ reactiveMain floats events = return pictures
     clickLabels = unions labelledClicks
     
     clickEvents :: Event t (Char, Int)
-    clickEvents = accumE (undefined, 0) (fmap mkEvent clickLabels)
-    
-    mkEvent :: Char -> (Char, Int) -> (Char, Int)
-    mkEvent label (_, n) = (label, n+1)
+    clickEvents = fmap swap
+                $ numberEvents
+                $ clickLabels
     
     countA,countB,countC :: Behavior t Int
     [countA,countB,countC] = map countN "abc"
@@ -57,7 +63,8 @@ reactiveMain floats events = return pictures
     countN :: Char -> Behavior t Int
     countN label = stepper 0
                  $ fmap snd
-                 $ filterE ((== label) . fst) clickEvents
+                 $ filterE ((== label) . fst)
+                 $ clickEvents
     
     clickCounts :: Behavior t (Int,Int,Int)
     clickCounts = liftA3 (,,) countA countB countC
@@ -65,14 +72,36 @@ reactiveMain floats events = return pictures
     pictures :: Behavior t Picture
     pictures = fmap render clickCounts
 
-countEventsB :: Num a => Event t b -> Behavior t a
-countEventsB = accumB 0 . fmap (+) . fmap (const 1)
+
+voidE :: Event t a -> Event t ()
+voidE = fmap (const ())
+
+
+firstEvent :: Event t a -> Event t a
+firstEvent = fmap snd
+           . filterE ((== 1) . fst)
+           . numberEvents
+
+-- (1, x1), (2, x2), ...
+numberEvents :: Event t a -> Event t (Int, a)
+numberEvents = accumZip 0 (+1)
+
+
+accumZip :: a -> (a -> a) -> Event t b -> Event t (a, b)
+accumZip zero suc = accumE (zero, undefined)
+                  . fmap go
+  where
+    go y (x,_) = (suc x, y)
+
+accumZipWith :: (a -> b -> c) -> a -> (a -> a) -> Event t b -> Event t c
+accumZipWith f zero suc = fmap (uncurry f) . accumZip zero suc
+
 
 buttons :: [Extent]
 buttons = [extentA, extentB, extentC]
 
 buttonClick :: Extent -> Event t InputEvent -> Event t ()
-buttonClick ex = fmap (const ()) . filterE isInside
+buttonClick ex = voidE . filterE isInside
   where
     isInside (EventKey (MouseButton LeftButton) Down _ p) = pointInExtent ex p
     isInside _                                            = False
