@@ -59,21 +59,21 @@ reactiveMain floats events = return pictures
                 $ numberEvents
                 $ clickLabels
     
-    countA,countB,countC :: Behavior t Int
-    [countA,countB,countC] = map countN "abc"
+    textA,textB,textC :: Behavior t String
+    [textA,textB,textC] = map textN "abc"
     
-    countN :: Char -> Behavior t Int
-    countN label = stepper 0
-                 $ delayE floats 0.5
-                 $ fmap snd
-                 $ filterE ((== label) . fst)
-                 $ clickEvents
+    textN :: Char -> Behavior t String
+    textN label = stepper "0"
+                $ delayE floats 0.5
+                $ fmap (show . snd)
+                $ filterE ((== label) . fst)
+                $ clickEvents
     
-    clickCounts :: Behavior t (Int,Int,Int)
-    clickCounts = liftA3 (,,) countA countB countC
+    buttonTexts :: Behavior t (String,String,String)
+    buttonTexts = liftA3 (,,) textA textB textC
     
     pictures :: Behavior t Picture
-    pictures = fmap render clickCounts
+    pictures = fmap render buttonTexts
 
 
 voidE :: Event t a -> Event t ()
@@ -156,11 +156,11 @@ buttonClick ex = voidE . filterE isInside
 renderFloat :: Float -> Picture
 renderFloat = uscale 0.2 . text . show
 
-render :: (Int, Int, Int) -> Picture
+render :: (String, String, String) -> Picture
 render (xA, xB, xC) = button extentR "Refresh"
-                   <> button extentA (show xA)
-                   <> button extentB (show xB)
-                   <> button extentC (show xC)
+                   <> button extentA xA
+                   <> button extentB xB
+                   <> button extentC xC
 
 button :: Extent -> String -> Picture
 button ex s = color azure bg <> color white fg
