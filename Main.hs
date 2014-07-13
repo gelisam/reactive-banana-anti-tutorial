@@ -63,11 +63,14 @@ reactiveMain floats events = return pictures
     [textA,textB,textC] = map textN "abc"
     
     textN :: Char -> Behavior t String
-    textN label = stepper "0"
-                $ delayE floats 0.5
-                $ fmap (show . snd)
-                $ filterE ((== label) . fst)
-                $ clickEvents
+    textN label = stepper "loading..." (loadingN `union` delayedCountN)
+      where
+        countN, loadingN, delayedCountN :: Event t String
+        countN = fmap (show . snd)
+               $ filterE ((== label) . fst)
+               $ clickEvents
+        loadingN = fmap (const "loading...") countN
+        delayedCountN = delayE floats 0.5 countN
     
     buttonTexts :: Behavior t (String,String,String)
     buttonTexts = liftA3 (,,) textA textB textC
